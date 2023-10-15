@@ -5,19 +5,19 @@ int main(int argc, char *argv[])
 {
     cout << argc << " args received." << endl;
     int o;
-    int alg;          // 算法选择
+    int alg;
     int dim;          // dimension
     int n;            // dataset scale
     int MinPts;       // MinPts
     double epsilon;   // epsilon
     double rho = 0.5; // ρ
 
-    int init_num;     // randomized gonzalez初始center集大小
-    int farthest_num; // randomized gonzalez每轮迭代选择最远点数
-    int select_num;   // randomized gonzalez每轮新增点数
+    int init_num;
+    int farthest_num;
+    int select_num;
 
-    int max_layer;       // 最高层的layer
-    int terminate_layer; // 查找NN时，最低查到几层
+    int max_layer;
+    int terminate_layer;
 
     string input_fileName;
     string output_data_filename;

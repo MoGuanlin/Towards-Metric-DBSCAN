@@ -37,27 +37,27 @@ LevenshteinDist(const Point &p1, const Point &p2)
 {
     /* cout << "*********p1: " << p1.text << endl;
     cout << "*********p2: " << p2.text << endl;*/
-    int row = p1.text.length(); /* p1 的长度 */
-    int col = p2.text.length(); /* p2 的长度 */
+    int row = p1.text.length();
+    int col = p2.text.length();
 
-    int mat[row][col]; /* C99 - variable-length array */
+    int mat[row][col];
 
     for (int i = 0; i < row; ++i)
-    { /* 数组的行 */
+    {
         for (int j = 0; j < col; ++j)
-        { /* 数组的列 */
+        {
             if (i == 0)
             {
-                mat[i][j] = j; /* 初始化第1行为 [ 0 1 2 ... ] */
+                mat[i][j] = j;
             }
             else if (j == 0)
             {
-                mat[i][j] = i; /* 初始化第1列为 [ 0 1 2 ... ] */
+                mat[i][j] = i;
             }
             else
             {
-                int cost = (p1.text[i - 1] == p2.text[j - 1]) ? 0 : 1; /* 记录s1[i-1]与s2[j-1]是否相等 */
-                mat[i][j] = MIN3(mat[i - 1][j] + 1,                    /* 取三者的最小值 */
+                int cost = (p1.text[i - 1] == p2.text[j - 1]) ? 0 : 1;
+                mat[i][j] = MIN3(mat[i - 1][j] + 1,
                                  mat[i][j - 1] + 1,
                                  mat[i - 1][j - 1] + cost);
             }

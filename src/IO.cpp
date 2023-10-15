@@ -22,7 +22,7 @@ void load_data(vector<Point *> &data, int dim, int n, string &input_fileName)
     }
 }
 void load_text_data(vector<Point *> &data, int n, string &input_fileName)
-{ // 初始化文本文件
+{
     for (int i = 0; i < n; i++)
     {
         Point *newpoint = new Point();

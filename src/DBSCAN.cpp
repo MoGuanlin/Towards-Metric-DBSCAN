@@ -97,20 +97,20 @@ int cluster_core_vanilla(vector<Point *> &data, double epsilon, vector<vector<do
 }
 void calculate_epsilon_net(CoverTree *T, int epsilon_net_layer, vector<vector<double>> &distance_matrix, vector<Center *> &centers)
 
-{ // 从root开始，遍历整棵树
+{
     queue<Node *> Q;
     Q.push(T->root);
     while (!(Q.empty()))
     {
         Node *n = Q.front();
         Q.pop();
-        // 把n每一层的所有孩子入队列
+
         for (auto iter : (n->children))
         {
             for (auto iter2 : (iter.second))
                 Q.push(iter2);
         }
-        // 若n位于epsilon_net_layer的上方，则n为epsilon net中的一个center
+
         if (n->layer >= epsilon_net_layer)
         {
             Center *new_center = new Center(n);
@@ -280,14 +280,12 @@ void mark_core_edit(vector<Point *> &data, vector<Center *> &centers, double eps
     cout << "sparse count: " << sparse_count << endl;
 }
 void mark_core_covertree(vector<Center *> &centers, CoverTree *T, vector<vector<double>> &distance_matrix, int minpts, double epsilon, vector<Point *> &data, vector<Center *> &C)
-{ // 遍历centers，每一个center遍历子树，将每一个node加入center node的tree_members中，且center node weight+1
-    // 第二次遍历centers，若一个center的weight大于minpts，则将其所有tree_members nodes的points都标记为core
-    // 若一个center的weight小于minpts，则遍历其tree_members，每个member遍历Ap,对于每个Ap center，遍历它的tree_members进行距离查询，距自己epsilon以内的点多于minpts个则标记自身为core
+{
     for (auto center : centers)
     {
-        // center和自己的point_ptr同步
+
         center->center = center;
-        // 遍历子树
+
         queue<Node *> Q;
         Node *center_node = center->node_ptr;
         Q.push(center_node);
@@ -296,7 +294,7 @@ void mark_core_covertree(vector<Center *> &centers, CoverTree *T, vector<vector<
         {
             Node *n = Q.front();
             Q.pop();
-            // 统计当前center的tree_members和weight和r
+
             center->tree_members.push_back(n);
             center->members.push_back(n->point_ptr);
             center->weight += 1;
@@ -335,7 +333,7 @@ void mark_core_covertree(vector<Center *> &centers, CoverTree *T, vector<vector<
             {
                 member->point_ptr->center = center;
                 int neighbor_count = 0;
-                for (auto ap : center->Ap) // 遍历每个Ap的所有tree_members
+                for (auto ap : center->Ap)
                 {
                     for (auto neighbor_candidate : ap->tree_members)
                     {
@@ -364,7 +362,7 @@ void mark_core_covertree(vector<Center *> &centers, CoverTree *T, vector<vector<
     }
 }
 Node *NN_search(Node *p, Node *root, vector<vector<double>> &distance_matrix, vector<Point *> &data, int terminate_layer)
-{ // 迭代Qi集合，如果满足条件的Qi-1为空，则在Qi中找离p最近的点，作为p的最近邻返回
+{
     int layer = root->layer;
     vector<Node *> Qi;
     Qi.push_back(root);
@@ -372,14 +370,14 @@ Node *NN_search(Node *p, Node *root, vector<vector<double>> &distance_matrix, ve
     while (true)
     {
         vector<Node *> Q = Qi;
-        // 找Qi中每个点在layer-1层新增的孩子，加入Qi
+
         for (auto node : Qi)
         {
             if (node->children.count(layer - 1) > 0)
                 for (auto child : node->children[layer - 1])
                     Q.push_back(child);
         }
-        // 筛选Q,选出那些距离p比较近的作为next_Qi
+
         vector<Node *> next_Qi;
         for (auto node : Q)
         {
@@ -393,7 +391,7 @@ Node *NN_search(Node *p, Node *root, vector<vector<double>> &distance_matrix, ve
                 next_Qi.push_back(node);
             }
         }
-        if (next_Qi.size() == 0) // 如果没有next_Qi,说明Qi已经是p在root子树中的最近邻居集合了，需要在Qi中找一个距离p最近的点返回
+        if (next_Qi.size() == 0)
         {
             double min_dist = MAX_DIST;
             Node *NN;
@@ -412,7 +410,7 @@ Node *NN_search(Node *p, Node *root, vector<vector<double>> &distance_matrix, ve
             }
             return NN;
         }
-        else if (layer <= terminate_layer) // 如果layer已经小于阈值，则直接在当前的p最近邻候选集中寻找最近邻
+        else if (layer <= terminate_layer)
         {
             double min_dist = MAX_DIST;
             Node *NN;
@@ -431,7 +429,7 @@ Node *NN_search(Node *p, Node *root, vector<vector<double>> &distance_matrix, ve
             }
             return NN;
         }
-        else // 如果尚未到达layer的最小阈值，且next_Qi中仍然有node，则继续迭代
+        else
         {
             Qi = next_Qi;
             layer--;
@@ -439,7 +437,7 @@ Node *NN_search(Node *p, Node *root, vector<vector<double>> &distance_matrix, ve
     }
 }
 Node *NN_search2(Node *p, Center *root, vector<vector<double>> &distance_matrix, vector<Point *> &data, int terminate_layer)
-{ // 遍历root的每个member
+{
 
     double min_dist = MAX_DIST;
     Node *NN;
@@ -480,22 +478,18 @@ void connect_centers(vector<Center *> &centers, vector<vector<double>> &distance
             Center *center = Q.front();
             Q.pop();
 
-            //  对center.member中每一个member p，先设置p的clusterID，然后如果p是core point，则遍历center的Aps：
-            //  判断这个Ap的类别：
-            //  如果Ap是dense，则调用NN_search寻找p的最近邻，看最近邻与p的距离,若这个距离小于等于epsilon，则将Ap入队，设置queued
-            //  如果Ap是sparse，则遍历Ap的core tree_members，查询p与这些core tree_members的最小距离，若这个距离小于等于epsilon，则将Ap入队，设置queued
             for (auto p : center->tree_members)
             {
 
                 if (p->point_ptr->is_core == true)
                 {
-                    p->point_ptr->clusterID = cluster_ID; // 如果p不是core，则等待之后的cluster border来确定p的clusterID
+                    p->point_ptr->clusterID = cluster_ID;
 
                     for (auto Ap : center->Ap)
                     {
                         if (Ap->weight >= minpts)
                         {
-                            // Node *NN = NN_search(p, Ap->node_ptr, distance_matrix, data, terminate_layer);
+
                             Node *NN = NN_search2(p, Ap, distance_matrix, data, terminate_layer);
                             if (distance_matrix[p->point_ptr->ID][NN->point_ptr->ID] <= epsilon)
                             {
@@ -543,7 +537,6 @@ void connect_centers(vector<Center *> &centers, vector<vector<double>> &distance
     std::cout << "Cluster border time: " << std::chrono::duration<double>(end - start).count() * 1000 << " ms" << std::endl;
 
     // cluster borders
-    // 尚未标记所有的非core point p：对于每个非core p，遍历Ap的所有core point，遇到距离p epsilon以内的core，就把p的clusterID设为这个core的
 
     start = chrono::high_resolution_clock::now();
     for (auto center : centers)
@@ -601,7 +594,7 @@ void connect_centers(vector<Center *> &centers, vector<vector<double>> &distance
 }
 void connect_centers_bruteforce(vector<Center *> &centers, vector<vector<double>> &distance_matrix, vector<Point *> &data, int terminate_layer, double r_max, int minpts, double epsilon)
 {
-    // connect center太慢！
+
     auto start = chrono::high_resolution_clock::now();
     int cluster_ID = 0;
     queue<Center *> Q;
@@ -622,22 +615,18 @@ void connect_centers_bruteforce(vector<Center *> &centers, vector<vector<double>
             Center *center = Q.front();
             Q.pop();
 
-            //  对center.member中每一个member p，先设置p的clusterID，然后如果p是core point，则遍历center的Aps：
-            //  判断这个Ap的类别：
-            //  如果Ap是dense，则调用NN_search寻找p的最近邻，看最近邻与p的距离,若这个距离小于等于epsilon，则将Ap入队，设置queued
-            //  如果Ap是sparse，则遍历Ap的core tree_members，查询p与这些core tree_members的最小距离，若这个距离小于等于epsilon，则将Ap入队，设置queued
             for (auto p : center->tree_members)
             {
 
                 if (p->point_ptr->is_core == true)
                 {
-                    p->point_ptr->clusterID = cluster_ID; // 如果p不是core，则等待之后的cluster border来确定p的clusterID
+                    p->point_ptr->clusterID = cluster_ID;
 
                     for (auto Ap : center->Ap)
                     {
                         if (Ap->weight >= minpts)
                         {
-                            // Node *NN = NN_search(p, Ap->node_ptr, distance_matrix, data, terminate_layer);
+
                             Node *NN = NN_search2(p, Ap, distance_matrix, data, terminate_layer);
                             if (distance_matrix[p->point_ptr->ID][NN->point_ptr->ID] <= epsilon)
                             {
@@ -685,7 +674,6 @@ void connect_centers_bruteforce(vector<Center *> &centers, vector<vector<double>
     std::cout << "Connect center time: " << std::chrono::duration<double>(end - start).count() * 1000 << " ms" << std::endl;
 
     // cluster borders
-    // 尚未标记所有的非core point p：对于每个非core p，遍历Ap的所有core point，遇到距离p epsilon以内的core，就把p的clusterID设为这个core的
 
     start = chrono::high_resolution_clock::now();
     for (auto center : centers)
@@ -698,7 +686,7 @@ void connect_centers_bruteforce(vector<Center *> &centers, vector<vector<double>
                 {
                     bool cluster_found = false;
                     for (auto Ap : center->Ap)
-                    { // 遍历Ap的所有core tree_members,遇到近的则break
+                    {
                         for (auto node : Ap->tree_members)
                         {
                             if (node->point_ptr->is_core == true)
@@ -1090,7 +1078,7 @@ void DBSCAN_exact(int dim, int n, int MinPts, double epsilon, double rho, string
     cout << "*******************K-center procedure*******************" << endl;
     auto start = chrono::high_resolution_clock::now();
 
-    Kcenter(data, centers, r, distance_matrix); // kcenter过程
+    Kcenter(data, centers, r, distance_matrix);
 
     cout << "Kcenter complete! "
          << "Centers number: " << centers.size() << endl;
@@ -1207,9 +1195,9 @@ void DBSCAN_exact(int dim, int n, int MinPts, double epsilon, double rho, string
 }
 void DBSCAN_exact_covertree(int dim, int n, int MinPts, double epsilon, double rho, string input_fileName, string output_data_filename, string output_center_filename, int max_layer, int terminate_layer)
 {
-    double r = epsilon * rho;                 // kcenter termination condition
-    int epsilon_net_layer = floor(log2(r));   // epsilon net的层数
-    double r_max = pow(2, epsilon_net_layer); // epsilonnet中每个center的最大半径
+    double r = epsilon * rho; // kcenter termination condition
+    int epsilon_net_layer = floor(log2(r));
+    double r_max = pow(2, epsilon_net_layer);
 
     vector<Point *> data; // dataset
 
@@ -1225,8 +1213,6 @@ void DBSCAN_exact_covertree(int dim, int n, int MinPts, double epsilon, double r
 
     auto Alg_start = chrono::high_resolution_clock::now();
 
-    // CoverTree建树过程
-
     cout << "*******************CoverTree construction procedure*******************" << endl;
     auto start = chrono::high_resolution_clock::now();
 
@@ -1237,7 +1223,6 @@ void DBSCAN_exact_covertree(int dim, int n, int MinPts, double epsilon, double r
     std::cout << "CoverTree construction time: " << std::chrono::duration<double>(end - start).count() * 1000 << " ms" << std::endl;
     cout << "********************************************************" << endl;
 
-    // 计算epsilon net
     cout << "*******************Calculating epsilon net*******************" << endl;
     start = chrono::high_resolution_clock::now();
 
@@ -1261,7 +1246,6 @@ void DBSCAN_exact_covertree(int dim, int n, int MinPts, double epsilon, double r
     std::cout << "Calculate neighbors time: " << std::chrono::duration<double>(end - start).count() * 1000 << " ms" << std::endl;
     cout << "********************************************************" << endl;
 
-    // 至此，centers中存储了epsilon net中各centers的Node，以及每个center的Ap集合。尚未计算每个center的weight，以及具体包含哪些points
     cout << "*******************Mark core*******************" << endl;
     start = chrono::high_resolution_clock::now();
     vector<Center *> C;
@@ -1279,7 +1263,6 @@ void DBSCAN_exact_covertree(int dim, int n, int MinPts, double epsilon, double r
     std::cout << "connect center time: " << std::chrono::duration<double>(end - start).count() * 1000 << " ms" << std::endl;
     cout << "********************************************************" << endl;
 
-    // 简单处理重复点
     for (int i = 0; i < n; i++)
     {
         if (data[i]->clusterID == -1)
@@ -1293,8 +1276,6 @@ void DBSCAN_exact_covertree(int dim, int n, int MinPts, double epsilon, double r
             }
         }
     }
-
-    // 统计过程
 
     auto Alg_end = chrono::high_resolution_clock::now();
     std::cout << "Total time: " << std::chrono::duration<double>(Alg_end - Alg_start).count() * 1000 << " ms" << std::endl;
@@ -1335,7 +1316,7 @@ void DBSCAN_exact_edit(int dim, int n, int MinPts, double epsilon, double rho, s
     cout << "*******************K-center procedure*******************" << endl;
     auto start = chrono::high_resolution_clock::now();
 
-    Kcenter_edit(data, centers, r, distance_matrix); // kcenter过程
+    Kcenter_edit(data, centers, r, distance_matrix);
 
     cout << "Kcenter complete! "
          << "Centers number: " << centers.size() << endl;
@@ -1421,33 +1402,6 @@ void DBSCAN_exact_edit(int dim, int n, int MinPts, double epsilon, double rho, s
     cout << "Border point count: " << border_num << endl;
     cout << "Outlier count: " << outlier_num << endl;
 
-    /* std::vector<int> indices(clusters.size());
-
-    for (int i = 0; i < indices.size(); ++i)
-    {
-        indices[i] = i;
-    }
-
-    std::sort(indices.begin(), indices.end(), [&](int a, int b)
-              { return clusters[a] > clusters[b]; });
-
-    std::map<int, int> clusterID_map;
-    for (int i = 0; i < indices.size(); ++i)
-    {
-        clusterID_map[indices[i]] = i;
-    }
-
-    for (auto iter = data.begin(); iter != data.end(); iter++)
-    {
-        auto mapIt = clusterID_map.find((*iter)->clusterID);
-        if (mapIt != clusterID_map.end())
-        {
-            (*iter)->clusterID = mapIt->second;
-        }
-    }
-
-    sort(clusters.rbegin(), clusters.rend()); */
-
     output(data, centers, output_data_filename, output_center_filename);
 }
 void DBSCAN_approx(int dim, int n, int MinPts, double epsilon, double rho, string input_fileName, string output_data_filename, string output_center_filename)
@@ -1472,7 +1426,7 @@ void DBSCAN_approx(int dim, int n, int MinPts, double epsilon, double rho, strin
     cout << "*******************K-center procedure*******************" << endl;
     auto start = chrono::high_resolution_clock::now();
 
-    Kcenter(data, centers, r, distance_matrix); // kcenter过程
+    Kcenter(data, centers, r, distance_matrix);
 
     cout << "Kcenter complete! "
          << "Centers number: " << centers.size() << endl;
@@ -1609,7 +1563,7 @@ void DBSCAN_approx_random(int dim, int n, int MinPts, double epsilon, double rho
     cout << "*******************K-center procedure*******************" << endl;
     auto start = chrono::high_resolution_clock::now();
 
-    Randomized_Kcenter(data, centers, r, distance_matrix, init_num, farthest_num, select_num); // kcenter过程
+    Randomized_Kcenter(data, centers, r, distance_matrix, init_num, farthest_num, select_num);
 
     cout << "Kcenter complete! "
          << "Centers number: " << centers.size() << endl;
@@ -1746,7 +1700,7 @@ void DBSCAN_approx_edit(int dim, int n, int MinPts, double epsilon, double rho, 
     cout << "*******************K-center procedure*******************" << endl;
     auto start = chrono::high_resolution_clock::now();
 
-    Kcenter_edit(data, centers, r, distance_matrix); // kcenter过程
+    Kcenter_edit(data, centers, r, distance_matrix);
 
     cout << "Kcenter complete! "
          << "Centers number: " << centers.size() << endl;
@@ -1880,7 +1834,7 @@ void DBSCAN_vanilla(int dim, int n, int MinPts, double epsilon, string input_fil
     cout << "*******************Range search procedure*******************" << endl;
     auto start = chrono::high_resolution_clock::now();
 
-    range_search(data, MinPts, epsilon, distance_matrix); // 每个点遍历所有点进行range search,并确定每个点是否为core point
+    range_search(data, MinPts, epsilon, distance_matrix);
 
     cout << "Range search complete!" << endl;
     auto end = chrono::high_resolution_clock::now();
@@ -1980,7 +1934,7 @@ void DBSCAN_vanilla_edit(int dim, int n, int MinPts, double epsilon, string inpu
     cout << "*******************Range search procedure*******************" << endl;
     auto start = chrono::high_resolution_clock::now();
 
-    range_search_edit(data, MinPts, epsilon, distance_matrix); // 每个点遍历所有点进行range search,并确定每个点是否为core point
+    range_search_edit(data, MinPts, epsilon, distance_matrix);
 
     cout << "Range search complete!" << endl;
     auto end = chrono::high_resolution_clock::now();
@@ -2064,9 +2018,9 @@ void DBSCAN_vanilla_edit(int dim, int n, int MinPts, double epsilon, string inpu
 
 void DBSCAN_approx_covertree(int dim, int n, int MinPts, double epsilon, double rho, string input_fileName, string output_data_filename, string output_center_filename, int max_layer, int terminate_layer)
 {
-    double r = epsilon * rho;                 // kcenter termination condition
-    int epsilon_net_layer = floor(log2(r));   // epsilon net的层数
-    double r_max = pow(2, epsilon_net_layer); // epsilonnet中每个center的最大半径
+    double r = epsilon * rho; // kcenter termination condition
+    int epsilon_net_layer = floor(log2(r));
+    double r_max = pow(2, epsilon_net_layer);
 
     vector<Point *> data; // dataset
 
@@ -2082,8 +2036,6 @@ void DBSCAN_approx_covertree(int dim, int n, int MinPts, double epsilon, double 
 
     auto Alg_start = chrono::high_resolution_clock::now();
 
-    // CoverTree建树过程
-
     cout << "*******************CoverTree construction procedure*******************" << endl;
     auto start = chrono::high_resolution_clock::now();
 
@@ -2094,7 +2046,6 @@ void DBSCAN_approx_covertree(int dim, int n, int MinPts, double epsilon, double 
     std::cout << "CoverTree construction time: " << std::chrono::duration<double>(end - start).count() * 1000 << " ms" << std::endl;
     cout << "********************************************************" << endl;
 
-    // 计算epsilon net
     cout << "*******************Calculating epsilon net*******************" << endl;
     start = chrono::high_resolution_clock::now();
 
@@ -2118,7 +2069,6 @@ void DBSCAN_approx_covertree(int dim, int n, int MinPts, double epsilon, double 
     std::cout << "Calculate neighbors time: " << std::chrono::duration<double>(end - start).count() * 1000 << " ms" << std::endl;
     cout << "********************************************************" << endl;
 
-    // 至此，centers中存储了epsilon net中各centers的Node，以及每个center的Ap集合。尚未计算每个center的weight，以及具体包含哪些points
     cout << "*******************Mark core*******************" << endl;
     start = chrono::high_resolution_clock::now();
     vector<Center *> C;
